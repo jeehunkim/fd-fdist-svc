@@ -5,11 +5,27 @@ import { Empty } from "./google/protobuf/empty.pb";
 
 export const protobufPackage = "fdist";
 
+export interface VideoMakeRequest {
+  videoId: number;
+  userId: number;
+  tempId: string;
+  recordType: string;
+}
+
+export interface VideoMakeResponse {
+  videoId: number;
+  userId: number;
+  tempId: string;
+  recordType: string;
+}
+
 export interface VideoUploadRequest {
   tempId: string;
   category: string;
   recordType: string;
   contents: string[];
+  duration: string;
+  thumbnail: string[];
 }
 
 export interface VideoUploadResponse {
@@ -48,11 +64,16 @@ export interface TogglePublishedResponse_DATA {
 }
 
 export interface DeleteVideoRequest {
-  userId: string;
   videoId: number;
 }
 
 export interface DeleteVideoResponse {
+  result: string;
+  status: number;
+  message: string;
+}
+
+export interface IvpVideoResponse {
   result: string;
   status: number;
   message: string;
@@ -208,6 +229,19 @@ export interface GetVideoCategoryResponse {
 export interface GetVideoCategoryResponse_DATA {
   index: number;
   category: string;
+}
+
+export interface GetReportTypeResponse {
+  result: string;
+  status: number;
+  message: string;
+  data: GetReportTypeResponse_DATA[];
+}
+
+export interface GetReportTypeResponse_DATA {
+  code: string;
+  name: string;
+  isDeleted: boolean;
 }
 
 export interface ReportVideoRequest {
@@ -549,6 +583,75 @@ export interface AddMwcResponse_DATA {
   channelList: string[];
 }
 
+export interface VideoTagListByVideoIdRequest {
+  videoId: number;
+}
+
+export interface VideoTagListByVideoIdResponse {
+  result: string;
+  status: number;
+  message: string;
+  data: VideoTagListByVideoIdResponse_DATA[];
+}
+
+export interface VideoTagListByVideoIdResponse_DATA {
+  id: number;
+  videoId: number;
+  tag: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoTagCreateRequest {
+  videoId: number;
+  tag: string;
+}
+
+export interface VideoTagCreateResponse {
+  result: string;
+  status: number;
+  message: string;
+  data: VideoTagCreateResponse_DATA | undefined;
+}
+
+export interface VideoTagCreateResponse_DATA {
+  id: number;
+  videoId: number;
+  tag: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VideoTagDeleteRequest {
+  id: number;
+}
+
+export interface VideoTagDeleteResponse {
+  result: string;
+  status: number;
+  message: string;
+}
+
+export interface VideoTagUpdateRequest {
+  id: number;
+  tag: string;
+}
+
+export interface VideoTagUpdateResponse {
+  result: string;
+  status: number;
+  message: string;
+  data: VideoTagUpdateResponse_DATA | undefined;
+}
+
+export interface VideoTagUpdateResponse_DATA {
+  id: number;
+  videoId: number;
+  tag: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const FDIST_PACKAGE_NAME = "fdist";
 
 export interface VideoServiceClient {
@@ -558,7 +661,13 @@ export interface VideoServiceClient {
 
   shootingVideo(request: addTmpVideoRequest): Observable<addTmpVideoResponse>;
 
-  videoUpload(request: VideoUploadRequest): Observable<VideoUploadResponse>;
+  videoDone(request: VideoUploadRequest): Observable<VideoUploadResponse>;
+
+  videoMake(request: VideoMakeRequest): Observable<VideoMakeResponse>;
+
+  ivpVideo(request: GetVideoByIdRequest): Observable<IvpVideoResponse>;
+
+  ivpVideoP(request: GetVideoByIdRequest): Observable<IvpVideoResponse>;
 }
 
 export interface VideoServiceController {
@@ -574,14 +683,28 @@ export interface VideoServiceController {
     request: addTmpVideoRequest,
   ): Promise<addTmpVideoResponse> | Observable<addTmpVideoResponse> | addTmpVideoResponse;
 
-  videoUpload(
+  videoDone(
     request: VideoUploadRequest,
   ): Promise<VideoUploadResponse> | Observable<VideoUploadResponse> | VideoUploadResponse;
+
+  videoMake(request: VideoMakeRequest): Promise<VideoMakeResponse> | Observable<VideoMakeResponse> | VideoMakeResponse;
+
+  ivpVideo(request: GetVideoByIdRequest): Promise<IvpVideoResponse> | Observable<IvpVideoResponse> | IvpVideoResponse;
+
+  ivpVideoP(request: GetVideoByIdRequest): Promise<IvpVideoResponse> | Observable<IvpVideoResponse> | IvpVideoResponse;
 }
 
 export function VideoServiceControllerMethods() {
   return function (constructor: Function) {
-    const grpcMethods: string[] = ["togglePublished", "deleteVideo", "shootingVideo", "videoUpload"];
+    const grpcMethods: string[] = [
+      "togglePublished",
+      "deleteVideo",
+      "shootingVideo",
+      "videoDone",
+      "videoMake",
+      "ivpVideo",
+      "ivpVideoP",
+    ];
     for (const method of grpcMethods) {
       const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
       GrpcMethod("VideoService", method)(constructor.prototype[method], method, descriptor);
@@ -622,6 +745,8 @@ export interface FDistServiceClient {
   toggleLike(request: ToggleLikeRequest): Observable<ToggleLikeResponse>;
 
   getLikeCheck(request: GetLikeCheckRequest): Observable<GetLikeCheckResponse>;
+
+  getReportVideoType(request: Empty): Observable<GetReportTypeResponse>;
 
   reportVideo(request: ReportVideoRequest): Observable<ReportVideoResponse>;
 
@@ -677,6 +802,10 @@ export interface FDistServiceController {
     request: GetLikeCheckRequest,
   ): Promise<GetLikeCheckResponse> | Observable<GetLikeCheckResponse> | GetLikeCheckResponse;
 
+  getReportVideoType(
+    request: Empty,
+  ): Promise<GetReportTypeResponse> | Observable<GetReportTypeResponse> | GetReportTypeResponse;
+
   reportVideo(
     request: ReportVideoRequest,
   ): Promise<ReportVideoResponse> | Observable<ReportVideoResponse> | ReportVideoResponse;
@@ -706,6 +835,7 @@ export function FDistServiceControllerMethods() {
       "getRecordType",
       "toggleLike",
       "getLikeCheck",
+      "getReportVideoType",
       "reportVideo",
       "myVideoList",
       "myVideoExists",
@@ -768,3 +898,48 @@ export function MwcServiceControllerMethods() {
 }
 
 export const MWC_SERVICE_NAME = "MwcService";
+
+export interface TagServiceClient {
+  videoTagCreate(request: VideoTagCreateRequest): Observable<VideoTagCreateResponse>;
+
+  videoTagDelete(request: VideoTagDeleteRequest): Observable<VideoTagDeleteResponse>;
+
+  videoTagUpdate(request: VideoTagUpdateRequest): Observable<VideoTagUpdateResponse>;
+
+  videoTagListByVideoId(request: VideoTagListByVideoIdRequest): Observable<VideoTagListByVideoIdResponse>;
+}
+
+export interface TagServiceController {
+  videoTagCreate(
+    request: VideoTagCreateRequest,
+  ): Promise<VideoTagCreateResponse> | Observable<VideoTagCreateResponse> | VideoTagCreateResponse;
+
+  videoTagDelete(
+    request: VideoTagDeleteRequest,
+  ): Promise<VideoTagDeleteResponse> | Observable<VideoTagDeleteResponse> | VideoTagDeleteResponse;
+
+  videoTagUpdate(
+    request: VideoTagUpdateRequest,
+  ): Promise<VideoTagUpdateResponse> | Observable<VideoTagUpdateResponse> | VideoTagUpdateResponse;
+
+  videoTagListByVideoId(
+    request: VideoTagListByVideoIdRequest,
+  ): Promise<VideoTagListByVideoIdResponse> | Observable<VideoTagListByVideoIdResponse> | VideoTagListByVideoIdResponse;
+}
+
+export function TagServiceControllerMethods() {
+  return function (constructor: Function) {
+    const grpcMethods: string[] = ["videoTagCreate", "videoTagDelete", "videoTagUpdate", "videoTagListByVideoId"];
+    for (const method of grpcMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcMethod("TagService", method)(constructor.prototype[method], method, descriptor);
+    }
+    const grpcStreamMethods: string[] = [];
+    for (const method of grpcStreamMethods) {
+      const descriptor: any = Reflect.getOwnPropertyDescriptor(constructor.prototype, method);
+      GrpcStreamMethod("TagService", method)(constructor.prototype[method], method, descriptor);
+    }
+  };
+}
+
+export const TAG_SERVICE_NAME = "TagService";
